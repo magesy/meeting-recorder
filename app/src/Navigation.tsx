@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -13,14 +13,6 @@ import TranscriptScreen from './screens/TranscriptScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-
-function RecordButton({ focused }: { focused: boolean }) {
-  return (
-    <View style={[styles.recordTab, focused && styles.recordTabActive]}>
-      <Ionicons name="mic" size={24} color={focused ? Colors.secondary : Colors.onSurfaceVariant} />
-    </View>
-  );
-}
 
 function HomeTabs() {
   return (
@@ -51,21 +43,11 @@ function HomeTabs() {
         name="Record"
         component={RecordingScreen}
         options={{
-          tabBarIcon: ({ focused }) => <RecordButton focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Insights"
-        component={DashboardScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="analytics-outline" size={size} color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Account"
-        component={DashboardScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <View style={[styles.recordBtn, { backgroundColor: color === Colors.secondary ? Colors.secondary + '20' : Colors.surfaceContainerLow }]}>
+              <Ionicons name="mic" size={24} color={color} />
+            </View>
+          ),
         }}
       />
     </Tab.Navigator>
@@ -88,24 +70,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: '#e4e2e3',
-    height: 70,
-    paddingBottom: 10,
+    height: Platform.OS === 'android' ? 60 : 80,
+    paddingBottom: Platform.OS === 'android' ? 8 : 20,
     paddingTop: 8,
   },
   tabLabel: {
     fontSize: 11,
     fontWeight: '500',
   },
-  recordTab: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.surfaceContainerLow,
+  recordBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
-  },
-  recordTabActive: {
-    backgroundColor: Colors.secondary + '20',
   },
 });

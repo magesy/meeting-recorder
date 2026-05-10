@@ -18,7 +18,7 @@ def _ensure_configured():
 def generate_mom(transcript: str) -> str:
     try:
         _ensure_configured()
-        model = genai.GenerativeModel('gemini-1.5-pro')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         prompt = (
             "You are a professional secretary. Please generate a Minutes of Meeting (MoM) from the provided transcript. "

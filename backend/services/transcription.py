@@ -14,7 +14,7 @@ def transcribe_audio(file_path: str) -> str:
 
     try:
         uploaded = genai.upload_file(file_path)
-        model = genai.GenerativeModel("gemini-1.5-pro")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content([
             "Transcribe this audio accurately. Return only the transcript text, nothing else.",
             uploaded

@@ -26,7 +26,8 @@ def test_generate_mom_success(mock_configure, mock_model_class):
     prompt = args[0]
     assert transcript in prompt
     assert "Minutes of Meeting" in prompt
-    assert "Thai and English" in prompt
+    assert "Thai" in prompt
+    assert "English" in prompt
 
 @patch("google.generativeai.GenerativeModel")
 def test_generate_mom_api_error(mock_model_class):

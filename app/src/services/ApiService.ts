@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import { CONFIG } from '../config';
 
-const BACKEND_URL = 'http://localhost:3000'; // Adjust as needed for your environment
+const BACKEND_URL = CONFIG.BACKEND_URL; 
 
 class ApiService {
   /**
@@ -11,17 +12,17 @@ class ApiService {
    */
   static async uploadAudio(uri: string) {
     let fileUri = uri;
-    
+
     // Prepend file:// if missing (needed for Android uploads in some React Native versions)
     if (Platform.OS === 'android' && !fileUri.startsWith('file://')) {
       fileUri = `file://${fileUri}`;
     }
 
     const formData = new FormData();
-    
+
     // Extract filename from URI
     const filename = fileUri.split('/').pop() || 'recording.m4a';
-    
+
     // In React Native, FormData.append for files requires an object with uri, name, and type
     formData.append('file', {
       uri: fileUri,
@@ -34,14 +35,49 @@ class ApiService {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        // Important for progress tracking if needed later
-        timeout: 60000, 
+        timeout: 60000,
       });
       return response.data;
     } catch (error: any) {
       if (axios.isAxiosError(error)) {
         console.error('Upload error details:', error.response?.data || error.message);
         throw new Error(error.response?.data?.error || 'Failed to upload audio to server');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Requests transcription for a previously uploaded file.
+   * @param filename The name of the file on the server.
+   */
+  static async transcribe(filename: string) {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/transcribe/${filename}`);
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        console.error('Transcription error details:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.detail || 'Failed to transcribe audio');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Generates Minutes of Meeting from a transcript.
+   * @param transcript The full text transcript.
+   */
+  static async generateMom(transcript: string) {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/generate-mom`, {
+        transcript: transcript
+      });
+      return response.data;
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        console.error('MoM generation error details:', error.response?.data || error.message);
+        throw new Error(error.response?.data?.detail || 'Failed to generate MoM');
       }
       throw error;
     }

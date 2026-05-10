@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None
     UPLOAD_DIR: str = "uploads"
+    CORS_ORIGINS: list[str] = ["*"]
+    ALLOWED_EXTENSIONS: set[str] = {".wav", ".mp3", ".m4a", ".webm"}
+    MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
 
     model_config = SettingsConfigDict(env_file=".env")
 

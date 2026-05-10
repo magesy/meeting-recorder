@@ -106,3 +106,22 @@ def test_transcribe_api_status_error(mock_client):
     finally:
         if os.path.exists(test_path):
             os.remove(test_path)
+
+def test_transcribe_file_too_large():
+    # Setup - Create a file > 25MB
+    test_filename = "large_transcribe_test.mp3"
+    test_path = os.path.join(settings.UPLOAD_DIR, test_filename)
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    
+    with open(test_path, "wb") as f:
+        # 25MB + 1 byte
+        f.seek(25 * 1024 * 1024)
+        f.write(b"0")
+    
+    try:
+        response = client.post(f"/transcribe/{test_filename}")
+        assert response.status_code == 413
+        assert "exceeds OpenAI's 25MB transcription limit" in response.json()["detail"]
+    finally:
+        if os.path.exists(test_path):
+            os.remove(test_path)

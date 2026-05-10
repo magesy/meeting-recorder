@@ -31,8 +31,8 @@ def test_upload_audio_success(cleanup_files):
 
 def test_upload_audio_file_too_large():
     filename = "large_audio.wav"
-    # Create content larger than 25MB
-    content = b"a" * (25 * 1024 * 1024 + 1)
+    # Create content larger than 50MB
+    content = b"a" * (50 * 1024 * 1024 + 1)
     
     with TestClient(app) as client:
         files = {"file": (filename, content, "audio/wav")}

@@ -1,20 +1,41 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TouchableOpacity, 
+  Alert, 
+  ActivityIndicator, 
+  ScrollView,
+  Dimensions
+} from 'react-native';
+import { useKeepAwake } from 'expo-keep-awake';
 import RecordingService from './src/services/RecordingService';
 import ApiService from './src/services/ApiService';
 
+const { width } = Dimensions.get('window');
+
+type AppStage = 'idle' | 'recording' | 'uploading' | 'transcribing' | 'viewing';
+type ViewTab = 'transcript' | 'mom';
+
 export default function App() {
-  const [isRecording, setIsRecording] = useState(false);
+  useKeepAwake();
+  
+  const [stage, setStage] = useState<AppStage>('idle');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [lastUri, setLastUri] = useState<string | null>(null);
-  const [uploadResult, setUploadResult] = useState<string | null>(null);
+  const [uploadedFilename, setUploadedFilename] = useState<string | null>(null);
+  const [transcript, setTranscript] = useState<string | null>(null);
+  const [mom, setMom] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ViewTab>('transcript');
+  const [isGeneratingMom, setIsGeneratingMom] = useState(false);
+  
   const [duration, setDuration] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (isRecording) {
+    if (stage === 'recording') {
       timerRef.current = setInterval(() => {
         setDuration((prev) => prev + 1);
       }, 1000);
@@ -23,7 +44,9 @@ export default function App() {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      setDuration(0);
+      if (stage === 'idle') {
+        setDuration(0);
+      }
     }
 
     return () => {
@@ -31,7 +54,7 @@ export default function App() {
         clearInterval(timerRef.current);
       }
     };
-  }, [isRecording]);
+  }, [stage]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -40,20 +63,25 @@ export default function App() {
   };
 
   const handleRecordPress = async () => {
-    if (isProcessing || isUploading) return;
+    if (isProcessing) return;
 
     setIsProcessing(true);
-    setUploadResult(null); // Clear previous results when starting new recording
     try {
-      if (isRecording) {
+      if (stage === 'recording') {
         const uri = await RecordingService.stopRecording();
-        setIsRecording(false);
+        setStage('idle');
         setLastUri(uri);
         console.log('Recording stopped, URI:', uri);
       } else {
+        // Reset state for new recording
+        setLastUri(null);
+        setUploadedFilename(null);
+        setTranscript(null);
+        setMom(null);
+        setActiveTab('transcript');
+        
         await RecordingService.startRecording();
-        setIsRecording(true);
-        setLastUri(null); // Clear previous URI
+        setStage('recording');
         console.log('Recording started');
       }
     } catch (error: any) {
@@ -63,19 +91,51 @@ export default function App() {
     }
   };
 
-  const handleUploadPress = async () => {
-    if (!lastUri || isUploading) return;
+  const handleUploadAndTranscribe = async () => {
+    if (!lastUri || stage !== 'idle') return;
 
-    setIsUploading(true);
+    setStage('uploading');
     try {
-      const result = await ApiService.uploadAudio(lastUri);
-      console.log('Upload success:', result);
-      setUploadResult(result.path || result.filename || 'Upload successful!');
-      Alert.alert('Success', 'Audio uploaded successfully');
+      // 1. Upload
+      const uploadResult = await ApiService.uploadAudio(lastUri);
+      const filename = uploadResult.filename;
+      setUploadedFilename(filename);
+      
+      // 2. Transcribe
+      setStage('transcribing');
+      const transcribeResult = await ApiService.transcribe(filename);
+      setTranscript(transcribeResult.transcript);
+      setStage('viewing');
+      setActiveTab('transcript');
+      
     } catch (error: any) {
-      Alert.alert('Upload Error', error.message || 'Failed to upload audio');
+      setStage('idle');
+      Alert.alert('Error', error.message || 'Process failed');
+    }
+  };
+
+  const handleGenerateMom = async () => {
+    if (!transcript || isGeneratingMom) return;
+
+    setIsGeneratingMom(true);
+    try {
+      const result = await ApiService.generateMom(transcript);
+      setMom(result.mom);
+      setActiveTab('mom');
+    } catch (error: any) {
+      Alert.alert('MoM Error', error.message || 'Failed to generate Minutes of Meeting');
     } finally {
-      setIsUploading(false);
+      setIsGeneratingMom(false);
+    }
+  };
+
+  const renderStatus = () => {
+    switch (stage) {
+      case 'recording': return 'Recording...';
+      case 'uploading': return 'Uploading Audio...';
+      case 'transcribing': return 'Transcribing (AI)...';
+      case 'viewing': return 'Results Ready';
+      default: return 'Ready';
     }
   };
 
@@ -83,55 +143,95 @@ export default function App() {
     <View style={styles.container}>
       <Text style={styles.title}>Meeting Recorder</Text>
 
-      <View style={styles.recorderContainer}>
-        <Text style={[styles.status, isRecording && styles.statusActive]}>
-          {isRecording ? 'Recording' : 'Ready to Record'}
-        </Text>
-
-        {isRecording && <Text style={styles.timer}>{formatDuration(duration)}</Text>}
-
-        <TouchableOpacity
-          style={[
-            styles.recordButton,
-            isRecording ? styles.stopButton : styles.startButton,
-            (isProcessing || isUploading) && styles.disabledButton,
-          ]}
-          onPress={handleRecordPress}
-          disabled={isProcessing || isUploading}
-        >
-          {isProcessing ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>{isRecording ? 'Stop' : 'Start'}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {lastUri && !isRecording && (
-        <View style={styles.resultContainer}>
-          <Text style={styles.resultLabel}>Last recording saved locally:</Text>
-          <Text style={styles.uri} numberOfLines={1} ellipsizeMode="middle">
-            {lastUri}
+      {stage !== 'viewing' && (
+        <View style={styles.recorderCard}>
+          <Text style={[styles.status, stage === 'recording' && styles.statusActive]}>
+            {renderStatus()}
           </Text>
 
+          {stage === 'recording' && <Text style={styles.timer}>{formatDuration(duration)}</Text>}
+
           <TouchableOpacity
-            style={[styles.uploadButton, isUploading && styles.disabledButton]}
-            onPress={handleUploadPress}
-            disabled={isUploading}
+            style={[
+              styles.recordButton,
+              stage === 'recording' ? styles.stopButton : styles.startButton,
+              (isProcessing || stage === 'uploading' || stage === 'transcribing') && styles.disabledButton,
+            ]}
+            onPress={handleRecordPress}
+            disabled={isProcessing || stage === 'uploading' || stage === 'transcribing'}
           >
-            {isUploading ? (
+            {isProcessing ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.uploadButtonText}>Upload to Server</Text>
+              <Text style={styles.buttonText}>{stage === 'recording' ? 'Stop' : 'Start'}</Text>
             )}
           </TouchableOpacity>
 
-          {uploadResult && (
-            <View style={styles.uploadResultBox}>
-              <Text style={styles.uploadResultLabel}>Server path:</Text>
-              <Text style={styles.uploadResultText}>{uploadResult}</Text>
-            </View>
+          {lastUri && stage === 'idle' && (
+            <TouchableOpacity
+              style={styles.processButton}
+              onPress={handleUploadAndTranscribe}
+            >
+              <Text style={styles.processButtonText}>Process Meeting</Text>
+            </TouchableOpacity>
           )}
+
+          {(stage === 'uploading' || stage === 'transcribing') && (
+            <ActivityIndicator size="large" color="#3182CE" style={{ marginTop: 20 }} />
+          )}
+        </View>
+      )}
+
+      {stage === 'viewing' && (
+        <View style={styles.resultsCard}>
+          <View style={styles.tabBar}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'transcript' && styles.activeTab]}
+              onPress={() => setActiveTab('transcript')}
+            >
+              <Text style={[styles.tabText, activeTab === 'transcript' && styles.activeTabText]}>Transcript</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'mom' && styles.activeTab]}
+              onPress={() => setActiveTab('mom')}
+            >
+              <Text style={[styles.tabText, activeTab === 'mom' && styles.activeTabText]}>Minutes (MoM)</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.scrollArea} contentContainerStyle={styles.scrollContent}>
+            {activeTab === 'transcript' ? (
+              <Text style={styles.transcriptText}>{transcript || 'No transcript available.'}</Text>
+            ) : (
+              <View>
+                {mom ? (
+                  <Text style={styles.momText}>{mom}</Text>
+                ) : (
+                  <View style={styles.emptyMom}>
+                    <Text style={styles.emptyText}>Minutes of Meeting haven't been generated yet.</Text>
+                    <TouchableOpacity 
+                      style={styles.generateButton}
+                      onPress={handleGenerateMom}
+                      disabled={isGeneratingMom}
+                    >
+                      {isGeneratingMom ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={styles.generateButtonText}>Generate Minutes with AI</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+          </ScrollView>
+
+          <TouchableOpacity 
+            style={styles.resetButton}
+            onPress={() => setStage('idle')}
+          >
+            <Text style={styles.resetButtonText}>New Recording</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -143,27 +243,27 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#F7FAFC',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    paddingTop: 60,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: '800',
     color: '#1A202C',
-    marginBottom: 40,
+    marginBottom: 30,
   },
-  recorderContainer: {
+  recorderCard: {
     width: '100%',
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 30,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowRadius: 20,
     elevation: 5,
   },
   status: {
@@ -176,23 +276,23 @@ const styles = StyleSheet.create({
     color: '#E53E3E',
   },
   timer: {
-    fontSize: 48,
+    fontSize: 54,
     fontWeight: '700',
     color: '#2D3748',
-    marginBottom: 20,
+    marginBottom: 30,
     fontVariant: ['tabular-nums'],
   },
   recordButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   startButton: {
     backgroundColor: '#3182CE',
@@ -201,65 +301,109 @@ const styles = StyleSheet.create({
     backgroundColor: '#E53E3E',
   },
   disabledButton: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  resultContainer: {
-    marginTop: 20,
-    width: '100%',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  resultLabel: {
-    fontSize: 14,
-    color: '#718096',
-    marginBottom: 5,
-    fontWeight: '600',
-  },
-  uri: {
-    fontSize: 12,
-    color: '#A0AEC0',
-    fontFamily: 'System',
-    marginBottom: 15,
-  },
-  uploadButton: {
+  processButton: {
+    marginTop: 30,
     backgroundColor: '#38A169',
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 15,
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  uploadButtonText: {
+  processButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
   },
-  uploadResultBox: {
-    marginTop: 15,
-    padding: 10,
-    backgroundColor: '#F0FFF4',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#C6F6D5',
+  resultsCard: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
   },
-  uploadResultLabel: {
-    fontSize: 12,
-    color: '#2F855A',
-    fontWeight: 'bold',
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
-  uploadResultText: {
-    fontSize: 12,
-    color: '#276749',
-    marginTop: 2,
+  tab: {
+    flex: 1,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  activeTab: {
+    borderBottomWidth: 3,
+    borderBottomColor: '#3182CE',
+  },
+  tabText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#718096',
+  },
+  activeTabText: {
+    color: '#3182CE',
+  },
+  scrollArea: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  transcriptText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#2D3748',
+  },
+  momText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#2D3748',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  emptyMom: {
+    alignItems: 'center',
+    paddingTop: 40,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: '#718096',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  generateButton: {
+    backgroundColor: '#805AD5',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resetButton: {
+    padding: 15,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  resetButtonText: {
+    color: '#3182CE',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

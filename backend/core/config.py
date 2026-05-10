@@ -4,6 +4,7 @@ import os
 
 class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     UPLOAD_DIR: str = "uploads"
     CORS_ORIGINS: list[str] = ["*"]
     ALLOWED_EXTENSIONS: set[str] = {".wav", ".mp3", ".m4a", ".webm"}

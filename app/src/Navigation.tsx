@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: '#e4e2e3',
-    height: Platform.OS === 'android' ? 60 : 80,
-    paddingBottom: Platform.OS === 'android' ? 8 : 20,
+    height: Platform.OS === 'android' ? 80 : 80,
+    paddingBottom: Platform.OS === 'android' ? 24 : 20,
     paddingTop: 8,
   },
   tabLabel: {

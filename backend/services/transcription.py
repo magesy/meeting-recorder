@@ -17,6 +17,8 @@ def transcribe_audio(file_path: str) -> str:
             transcription = client.audio.transcriptions.create(
                 model="whisper-large-v3",
                 file=audio_file,
+                response_format="verbose_json",
+                temperature=0.0,
             )
         return transcription.text
     except Exception as e:

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 import ApiService from '../services/ApiService';
 import { StorageService, Recording } from '../services/StorageService';
@@ -22,6 +23,37 @@ export default function TranscriptScreen({ route, navigation }: any) {
   const [recording, setRecording] = useState<Recording>(route.params.recording);
   const [tab, setTab] = useState<Tab>('transcript');
   const [loading, setLoading] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const soundRef = useRef<Audio.Sound | null>(null);
+
+  useEffect(() => {
+    return () => { soundRef.current?.unloadAsync(); };
+  }, []);
+
+  const handlePlayPause = async () => {
+    if (!recording.uri) return;
+    if (playing) {
+      await soundRef.current?.pauseAsync();
+      setPlaying(false);
+      return;
+    }
+    if (!soundRef.current) {
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: recording.uri },
+        { shouldPlay: true }
+      );
+      soundRef.current = sound;
+      sound.setOnPlaybackStatusUpdate(status => {
+        if (status.isLoaded && status.didJustFinish) {
+          setPlaying(false);
+          soundRef.current = null;
+        }
+      });
+    } else {
+      await soundRef.current.playAsync();
+    }
+    setPlaying(true);
+  };
 
   const handleGenerateMom = async () => {
     if (!recording.transcript) return;
@@ -77,6 +109,13 @@ export default function TranscriptScreen({ route, navigation }: any) {
         ))}
       </View>
 
+      {recording.uri && (
+        <TouchableOpacity style={s.playBar} onPress={handlePlayPause}>
+          <Ionicons name={playing ? 'pause-circle' : 'play-circle'} size={32} color={Colors.secondary} />
+          <Text style={s.playText}>{playing ? 'Pause Recording' : 'Play Recording'}</Text>
+        </TouchableOpacity>
+      )}
+
       <ScrollView contentContainerStyle={s.content}>
         {tab === 'transcript' ? (
           paragraphs.length > 0 ? paragraphs.map((p, i) => (
@@ -128,6 +167,8 @@ const s = StyleSheet.create({
   tabText: { ...Typography.labelMd, color: Colors.onSurfaceVariant },
   activeTabText: { color: Colors.secondary, fontWeight: '600' },
   content: { padding: Spacing.lg },
+  playBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 10, backgroundColor: Colors.surfaceContainerLow, borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant, gap: 10 },
+  playText: { ...Typography.labelMd, color: Colors.secondary },
   paragraph: { ...Typography.bodyMd, color: Colors.onSurface, lineHeight: 28, marginBottom: Spacing.md },
   momCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.outlineVariant, marginBottom: Spacing.md },
   momHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from './theme';
 
 import DashboardScreen from './screens/DashboardScreen';
@@ -15,11 +16,21 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function HomeTabs() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: {
+          backgroundColor: Colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: '#e4e2e3',
+          height: tabBarHeight,
+          paddingBottom: insets.bottom + 4,
+          paddingTop: 8,
+        },
         tabBarActiveTintColor: Colors.secondary,
         tabBarInactiveTintColor: Colors.onSurfaceVariant,
         tabBarLabelStyle: styles.tabLabel,
@@ -66,23 +77,6 @@ export default function Navigation() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: '#e4e2e3',
-    height: Platform.OS === 'android' ? 80 : 80,
-    paddingBottom: Platform.OS === 'android' ? 24 : 20,
-    paddingTop: 8,
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  recordBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  tabLabel: { fontSize: 11, fontWeight: '500' },
+  recordBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
 });

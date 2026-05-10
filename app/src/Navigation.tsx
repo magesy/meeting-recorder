@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Colors, Radius } from './theme';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Colors } from './theme';
 
 import DashboardScreen from './screens/DashboardScreen';
 import RecordingScreen from './screens/RecordingScreen';
@@ -13,11 +14,10 @@ import TranscriptScreen from './screens/TranscriptScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+function RecordButton({ focused }: { focused: boolean }) {
   return (
-    <View style={[styles.tabItem, focused && styles.tabItemActive]}>
-      <Text style={styles.tabEmoji}>{emoji}</Text>
-      <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
+    <View style={[styles.recordTab, focused && styles.recordTabActive]}>
+      <Ionicons name="mic" size={24} color={focused ? Colors.secondary : Colors.onSurfaceVariant} />
     </View>
   );
 }
@@ -28,23 +28,45 @@ function HomeTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarShowLabel: false,
+        tabBarActiveTintColor: Colors.secondary,
+        tabBarInactiveTintColor: Colors.onSurfaceVariant,
+        tabBarLabelStyle: styles.tabLabel,
       }}
     >
       <Tab.Screen
         name="Home"
         component={DashboardScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" label="Home" focused={focused} /> }}
+        options={{
+          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
+        }}
       />
       <Tab.Screen
         name="Library"
         component={LibraryScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="📁" label="Library" focused={focused} /> }}
+        options={{
+          tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="folder-outline" size={size} color={color} />,
+        }}
       />
       <Tab.Screen
         name="Record"
         component={RecordingScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🎙" label="Record" focused={focused} /> }}
+        options={{
+          tabBarIcon: ({ focused }) => <RecordButton focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Insights"
+        component={DashboardScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => <Ionicons name="analytics-outline" size={size} color={color} />,
+        }}
+      />
+      <Tab.Screen
+        name="Account"
+        component={DashboardScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+        }}
       />
     </Tab.Navigator>
   );
@@ -67,11 +89,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e4e2e3',
     height: 70,
-    paddingBottom: 8,
+    paddingBottom: 10,
+    paddingTop: 8,
   },
-  tabItem: { alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.md },
-  tabItemActive: { backgroundColor: Colors.secondary + '15' },
-  tabEmoji: { fontSize: 20 },
-  tabLabel: { fontSize: 11, color: Colors.onSurfaceVariant, marginTop: 2 },
-  tabLabelActive: { color: Colors.secondary, fontWeight: '600' },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  recordTab: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.surfaceContainerLow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  recordTabActive: {
+    backgroundColor: Colors.secondary + '20',
+  },
 });

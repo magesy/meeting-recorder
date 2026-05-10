@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 import ApiService from '../services/ApiService';
 import { StorageService, Recording } from '../services/StorageService';
@@ -38,11 +39,11 @@ export default function TranscriptScreen({ route, navigation }: any) {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Text style={s.backText}>←</Text>
+          <Ionicons name="arrow-back" size={24} color={Colors.onSurface} />
         </TouchableOpacity>
         <Text style={s.headerTitle} numberOfLines={1}>{recording.title}</Text>
         <TouchableOpacity onPress={handleShare}>
-          <Text style={s.shareText}>Share</Text>
+          <Ionicons name="share-outline" size={24} color={Colors.secondary} style={{ padding: Spacing.sm }} />
         </TouchableOpacity>
       </View>
 

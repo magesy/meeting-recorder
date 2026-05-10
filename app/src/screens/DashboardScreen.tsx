@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Radius } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Radius } from '../theme';
 import { StorageService, Recording } from '../services/StorageService';
 
 function formatDuration(s: number) {
@@ -42,11 +43,13 @@ export default function DashboardScreen({ navigation }: any) {
   return (
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.content}>
+        {/* Header */}
         <Text style={s.date}>
           {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </Text>
         <Text style={s.greeting}>{getGreeting()}</Text>
 
+        {/* Recent Recordings */}
         <View style={s.sectionRow}>
           <Text style={s.sectionTitle}>Recent Recordings</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Library')}>
@@ -66,12 +69,16 @@ export default function DashboardScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Transcript', { recording: r })}
             >
               <View style={s.cardTop}>
-                <View style={s.iconBox}><Text style={s.iconText}>🎙</Text></View>
-                <View style={s.badge}><Text style={s.badgeText}>{formatDuration(r.duration)}</Text></View>
+                <View style={s.iconBox}>
+                  <Ionicons name="people-outline" size={20} color={Colors.secondary} />
+                </View>
+                <View style={s.badge}>
+                  <Text style={s.badgeText}>{formatDuration(r.duration)}</Text>
+                </View>
               </View>
               <Text style={s.cardTitle}>{r.title}</Text>
               {r.transcript && (
-                <Text style={s.cardSummary} numberOfLines={2}>{r.transcript.slice(0, 100)}...</Text>
+                <Text style={s.cardSummary} numberOfLines={2}>{r.transcript.slice(0, 100)}</Text>
               )}
               <View style={s.divider} />
               <Text style={s.cardDate}>{formatDate(r.date)}</Text>
@@ -79,8 +86,10 @@ export default function DashboardScreen({ navigation }: any) {
           ))
         )}
 
+        {/* FAB-style record button */}
         <TouchableOpacity style={s.cta} onPress={() => navigation.navigate('Record')}>
-          <Text style={s.ctaText}>🎙  Start New Recording</Text>
+          <Ionicons name="mic" size={20} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={s.ctaText}>Start New Recording</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -90,23 +99,22 @@ export default function DashboardScreen({ navigation }: any) {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.lg, paddingBottom: 40 },
-  date: { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginBottom: 4 },
-  greeting: { fontSize: 36, fontWeight: '700', color: Colors.onSurface, lineHeight: 44, marginBottom: Spacing.lg },
+  date: { fontSize: 14, fontWeight: '400', color: Colors.onSurfaceVariant, marginBottom: 4 },
+  greeting: { fontSize: 40, fontWeight: '800', color: Colors.onSurface, lineHeight: 48, marginBottom: Spacing.lg },
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-  sectionTitle: { ...Typography.titleLg, color: Colors.onSurface },
-  viewAll: { ...Typography.labelMd, color: Colors.secondary },
+  sectionTitle: { fontSize: 20, fontWeight: '700', color: Colors.onSurface },
+  viewAll: { fontSize: 14, fontWeight: '500', color: Colors.secondary },
   card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.outlineVariant },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
-  iconBox: { width: 40, height: 40, borderRadius: Radius.md, backgroundColor: Colors.surfaceContainerLow, justifyContent: 'center', alignItems: 'center' },
-  iconText: { fontSize: 18 },
-  badge: { backgroundColor: Colors.surfaceContainerLow, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4 },
-  badgeText: { ...Typography.caption, color: Colors.onSurfaceVariant },
-  cardTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: 6 },
-  cardSummary: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginBottom: Spacing.sm },
+  iconBox: { width: 40, height: 40, borderRadius: Radius.md, backgroundColor: '#EEF2FF', justifyContent: 'center', alignItems: 'center' },
+  badge: { backgroundColor: Colors.surfaceContainerLow, borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 4, justifyContent: 'center' },
+  badgeText: { fontSize: 12, color: Colors.onSurfaceVariant, fontWeight: '500' },
+  cardTitle: { fontSize: 18, fontWeight: '700', color: Colors.onSurface, marginBottom: 6 },
+  cardSummary: { fontSize: 14, color: Colors.onSurfaceVariant, lineHeight: 20, marginBottom: Spacing.sm },
   divider: { height: 1, backgroundColor: Colors.outlineVariant, marginBottom: Spacing.sm },
-  cardDate: { ...Typography.caption, color: Colors.onSurfaceVariant },
-  emptyCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.lg, alignItems: 'center', borderWidth: 1, borderColor: Colors.outlineVariant, marginBottom: Spacing.md },
-  emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  cta: { backgroundColor: Colors.secondary, borderRadius: Radius.lg, padding: Spacing.md, alignItems: 'center', marginTop: Spacing.sm },
-  ctaText: { ...Typography.titleLg, color: '#fff' },
+  cardDate: { fontSize: 12, color: Colors.onSurfaceVariant },
+  emptyCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.outlineVariant, marginBottom: Spacing.md },
+  emptyText: { fontSize: 15, color: Colors.onSurfaceVariant },
+  cta: { backgroundColor: Colors.secondary, borderRadius: Radius.lg, padding: Spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: Spacing.sm },
+  ctaText: { fontSize: 18, fontWeight: '700', color: '#fff' },
 });

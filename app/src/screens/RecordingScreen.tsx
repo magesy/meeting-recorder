@@ -33,14 +33,11 @@ function WaveformBars({ active }: { active: boolean }) {
   return (
     <View style={s.waveform}>
       {anims.map((a, i) => (
-        <Animated.View
-          key={i}
-          style={[s.bar, {
-            transform: [{ scaleY: a }],
-            opacity: active ? 1 : 0.3,
-            backgroundColor: i === Math.floor(BAR_COUNT / 2) ? Colors.secondary : Colors.secondaryContainer,
-          }]}
-        />
+        <Animated.View key={i} style={[s.bar, {
+          transform: [{ scaleY: a }],
+          opacity: active ? 1 : 0.3,
+          backgroundColor: i === Math.floor(BAR_COUNT / 2) ? Colors.secondary : Colors.secondaryContainer,
+        }]} />
       ))}
     </View>
   );
@@ -50,9 +47,10 @@ export default function RecordingScreen({ navigation }: any) {
   useKeepAwake();
   const [stage, setStage] = useState<'idle' | 'recording' | 'processing'>('idle');
   const [duration, setDuration] = useState(0);
-  const [uri, setUri] = useState<string | null>(null);
+  const [pendingUri, setPendingUri] = useState<string | null>(null);
   const [nameModal, setNameModal] = useState(false);
   const [meetingName, setMeetingName] = useState('');
+  const [processingMsg, setProcessingMsg] = useState('Uploading audio...');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -81,36 +79,69 @@ export default function RecordingScreen({ navigation }: any) {
 
   const handleStop = async () => {
     try {
-      const recordedUri = await RecordingService.stopRecording();
-      setUri(recordedUri);
+      const uri = await RecordingService.stopRecording();
+      setPendingUri(uri);
       setStage('idle');
       setMeetingName(`Meeting ${new Date().toLocaleDateString()}`);
       setNameModal(true);
     } catch (e: any) { Alert.alert('Error', e.message); }
   };
 
+  // #1 - warn before discarding
+  const handleCancelModal = () => {
+    Alert.alert(
+      'Discard Recording?',
+      'The recording will be lost if you cancel.',
+      [
+        { text: 'Keep', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => {
+          setPendingUri(null);
+          setNameModal(false);
+        }},
+      ]
+    );
+  };
+
   const handleProcess = async () => {
-    if (!uri) return;
+    if (!pendingUri) return;
     setNameModal(false);
     setStage('processing');
+
+    // #2 - save locally first so URI is not lost on failure
+    const rec = {
+      id: Date.now().toString(),
+      title: meetingName || 'Untitled Meeting',
+      date: new Date().toISOString(),
+      duration,
+      transcript: null,
+      mom: null,
+      uri: pendingUri,
+    };
+    await StorageService.save(rec);
+
     try {
-      const upload = await ApiService.uploadAudio(uri);
+      // #4 - cold start message
+      setProcessingMsg('Connecting to server...\n(First request may take ~30 seconds)');
+      const upload = await ApiService.uploadAudio(pendingUri);
+
+      setProcessingMsg('Transcribing with AI...');
       const result = await ApiService.transcribe(upload.filename);
-      const rec = {
-        id: Date.now().toString(),
-        title: meetingName || 'Untitled Meeting',
-        date: new Date().toISOString(),
-        duration,
-        transcript: result.transcript,
-        mom: null,
-        uri,
-      };
-      await StorageService.save(rec);
+
+      // #8 - delete file from server after transcription
+      await ApiService.deleteFile(upload.filename).catch(() => {});
+
+      const updated = { ...rec, transcript: result.transcript };
+      await StorageService.save(updated);
       setStage('idle');
-      navigation.navigate('Transcript', { recording: rec });
+      navigation.navigate('Transcript', { recording: updated });
     } catch (e: any) {
       setStage('idle');
-      Alert.alert('Error', e.message);
+      // #2 - allow retry - recording is already saved locally
+      Alert.alert(
+        'Processing Failed',
+        `${e.message}\n\nYour recording was saved. You can retry from the Library.`,
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -130,7 +161,7 @@ export default function RecordingScreen({ navigation }: any) {
           <WaveformBars active={stage === 'recording'} />
           <Text style={s.captureText}>
             {stage === 'recording' ? 'Capturing high-fidelity audio...' :
-             stage === 'processing' ? 'Transcribing with AI...' : 'Ready to record'}
+             stage === 'processing' ? processingMsg : 'Ready to record'}
           </Text>
         </View>
 
@@ -146,7 +177,7 @@ export default function RecordingScreen({ navigation }: any) {
             </TouchableOpacity>
           )}
           {stage === 'processing' && (
-            <Text style={s.processingText}>Processing...</Text>
+            <Text style={s.processingText}>Please wait...</Text>
           )}
         </View>
       </View>
@@ -165,7 +196,7 @@ export default function RecordingScreen({ navigation }: any) {
             <TouchableOpacity style={s.processBtn} onPress={handleProcess}>
               <Text style={s.processBtnText}>Transcribe & Save</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setNameModal(false)}>
+            <TouchableOpacity onPress={handleCancelModal}>
               <Text style={s.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -185,7 +216,7 @@ const s = StyleSheet.create({
   waveContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   waveform: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surfaceContainerLow, borderRadius: Radius.xl, padding: 40, gap: 6 },
   bar: { width: 6, height: 60, borderRadius: 3 },
-  captureText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginTop: Spacing.lg },
+  captureText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginTop: Spacing.lg, textAlign: 'center' },
   controls: { alignItems: 'center', paddingBottom: Spacing.lg },
   startBtn: { backgroundColor: Colors.secondary, borderRadius: Radius.full, paddingHorizontal: 48, paddingVertical: 18 },
   startBtnText: { ...Typography.titleLg, color: '#fff' },

@@ -8,6 +8,16 @@ import { StorageService, Recording } from '../services/StorageService';
 
 type Tab = 'transcript' | 'insights';
 
+// #6 - break transcript into readable paragraphs
+function formatTranscript(text: string): string[] {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  const paragraphs: string[] = [];
+  for (let i = 0; i < sentences.length; i += 4) {
+    paragraphs.push(sentences.slice(i, i + 4).join(' ').trim());
+  }
+  return paragraphs;
+}
+
 export default function TranscriptScreen({ route, navigation }: any) {
   const [recording, setRecording] = useState<Recording>(route.params.recording);
   const [tab, setTab] = useState<Tab>('transcript');
@@ -29,11 +39,21 @@ export default function TranscriptScreen({ route, navigation }: any) {
     }
   };
 
+  // #7 - regenerate MoM
+  const handleRegenerateMom = () => {
+    Alert.alert('Regenerate Minutes?', 'This will replace the existing MoM.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Regenerate', onPress: handleGenerateMom },
+    ]);
+  };
+
   const handleShare = async () => {
     const content = tab === 'transcript' ? recording.transcript : recording.mom;
     if (!content) return;
     await Share.share({ message: content });
   };
+
+  const paragraphs = recording.transcript ? formatTranscript(recording.transcript) : [];
 
   return (
     <SafeAreaView style={s.safe}>
@@ -59,14 +79,27 @@ export default function TranscriptScreen({ route, navigation }: any) {
 
       <ScrollView contentContainerStyle={s.content}>
         {tab === 'transcript' ? (
-          <Text style={s.transcript}>{recording.transcript || 'No transcript available.'}</Text>
+          paragraphs.length > 0 ? paragraphs.map((p, i) => (
+            <Text key={i} style={s.paragraph}>{p}</Text>
+          )) : (
+            <Text style={s.paragraph}>No transcript available.</Text>
+          )
         ) : recording.mom ? (
-          <View style={s.momCard}>
-            <View style={s.momHeader}>
-              <Text style={s.momIcon}>✦</Text>
-              <Text style={s.momTitle}>AI Generated Minutes</Text>
+          <View>
+            <View style={s.momCard}>
+              <View style={s.momHeader}>
+                <Text style={s.momIcon}>✦</Text>
+                <Text style={s.momTitle}>AI Generated Minutes</Text>
+              </View>
+              <Text style={s.momText}>{recording.mom}</Text>
             </View>
-            <Text style={s.momText}>{recording.mom}</Text>
+            {/* #7 - regenerate button */}
+            <TouchableOpacity style={s.regenBtn} onPress={handleRegenerateMom} disabled={loading}>
+              {loading
+                ? <ActivityIndicator color={Colors.secondary} size="small" />
+                : <Text style={s.regenBtnText}>↺  Regenerate Minutes</Text>
+              }
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={s.empty}>
@@ -88,21 +121,21 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
   backBtn: { padding: Spacing.sm, marginRight: Spacing.sm },
-  backText: { fontSize: 22, color: Colors.onSurface },
   headerTitle: { flex: 1, ...Typography.titleLg, color: Colors.onSurface },
-  shareText: { ...Typography.labelMd, color: Colors.secondary, padding: Spacing.sm },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
   activeTab: { borderBottomWidth: 2, borderBottomColor: Colors.secondary },
   tabText: { ...Typography.labelMd, color: Colors.onSurfaceVariant },
   activeTabText: { color: Colors.secondary, fontWeight: '600' },
   content: { padding: Spacing.lg },
-  transcript: { ...Typography.bodyMd, color: Colors.onSurface, lineHeight: 28 },
-  momCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.outlineVariant },
+  paragraph: { ...Typography.bodyMd, color: Colors.onSurface, lineHeight: 28, marginBottom: Spacing.md },
+  momCard: { backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.outlineVariant, marginBottom: Spacing.md },
   momHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md },
   momIcon: { fontSize: 16, color: Colors.secondary, marginRight: 8 },
   momTitle: { ...Typography.titleLg, color: Colors.onSurface },
   momText: { ...Typography.bodyMd, color: Colors.onSurface, lineHeight: 26 },
+  regenBtn: { borderWidth: 1, borderColor: Colors.secondary, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center' },
+  regenBtnText: { ...Typography.labelMd, color: Colors.secondary },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyTitle: { fontSize: 22, fontWeight: '600', color: Colors.onSurface, marginBottom: Spacing.md },
   emptyDesc: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center', marginBottom: Spacing.lg, lineHeight: 24 },

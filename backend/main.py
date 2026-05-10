@@ -111,6 +111,15 @@ async def transcribe(filename: str):
         logger.error(f"Transcription failed for {safe_filename}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.delete("/files/{filename}")
+async def delete_file(filename: str):
+    safe_filename = os.path.basename(filename)
+    file_path = os.path.join(settings.UPLOAD_DIR, safe_filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        logger.info(f"Deleted file: {safe_filename}")
+    return {"status": "ok"}
+
 @app.post("/generate-mom")
 async def create_mom(request: MoMRequest):
     try:

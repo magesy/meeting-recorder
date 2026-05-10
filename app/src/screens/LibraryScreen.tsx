@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 import { StorageService, Recording } from '../services/StorageService';
+import ApiService from '../services/ApiService';
 
 function formatDuration(s: number) {
   const m = Math.floor(s / 60);
@@ -29,12 +31,52 @@ export default function LibraryScreen({ navigation }: any) {
     return unsub;
   }, [navigation]);
 
-  const handleDelete = (id: string) => {
-    Alert.alert('Delete', 'Delete this recording?', [
+  // #5 - rename on long press
+  const handleLongPress = (r: Recording) => {
+    Alert.alert(r.title, 'What would you like to do?', [
+      {
+        text: 'Rename',
+        onPress: () => {
+          Alert.prompt('Rename Recording', 'Enter new name:', async (newName) => {
+            if (newName?.trim()) {
+              await StorageService.save({ ...r, title: newName.trim() });
+              load();
+            }
+          }, 'plain-text', r.title);
+        },
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await StorageService.delete(r.id);
+          load();
+        },
+      },
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
-        await StorageService.delete(id);
-        load();
+    ]);
+  };
+
+  // retry processing for recordings without transcript
+  const handleRetry = async (r: Recording) => {
+    if (!r.uri) {
+      Alert.alert('Cannot Retry', 'Audio file is no longer available.');
+      return;
+    }
+    Alert.alert('Retry Transcription', 'Re-upload and transcribe this recording?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Retry', onPress: async () => {
+        try {
+          const upload = await ApiService.uploadAudio(r.uri!);
+          const result = await ApiService.transcribe(upload.filename);
+          await ApiService.deleteFile(upload.filename).catch(() => {});
+          const updated = { ...r, transcript: result.transcript };
+          await StorageService.save(updated);
+          load();
+          navigation.navigate('Transcript', { recording: updated });
+        } catch (e: any) {
+          Alert.alert('Error', e.message);
+        }
       }},
     ]);
   };
@@ -47,9 +89,11 @@ export default function LibraryScreen({ navigation }: any) {
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.title}>Library</Text>
+        <Text style={s.hint}>Long press a recording to rename or delete</Text>
       </View>
 
       <View style={s.searchRow}>
+        <Ionicons name="search-outline" size={18} color={Colors.onSurfaceVariant} style={s.searchIcon} />
         <TextInput
           style={s.search}
           placeholder="Search recordings..."
@@ -69,11 +113,14 @@ export default function LibraryScreen({ navigation }: any) {
             <TouchableOpacity
               key={r.id}
               style={s.card}
-              onPress={() => navigation.navigate('Transcript', { recording: r })}
-              onLongPress={() => handleDelete(r.id)}
+              onPress={() => r.transcript
+                ? navigation.navigate('Transcript', { recording: r })
+                : handleRetry(r)
+              }
+              onLongPress={() => handleLongPress(r)}
             >
               <View style={s.thumbnail}>
-                <Text style={s.thumbIcon}>🎙</Text>
+                <Ionicons name="mic" size={32} color="rgba(255,255,255,0.6)" />
                 <View style={s.durationBadge}>
                   <Text style={s.durationText}>{formatDuration(r.duration)}</Text>
                 </View>
@@ -83,8 +130,13 @@ export default function LibraryScreen({ navigation }: any) {
                   <Text style={s.cardTitle} numberOfLines={1}>{r.title}</Text>
                   <Text style={s.cardDate}>{formatDate(r.date)}</Text>
                 </View>
-                {r.transcript && (
+                {r.transcript ? (
                   <Text style={s.cardDesc} numberOfLines={2}>{r.transcript.slice(0, 120)}...</Text>
+                ) : (
+                  <View style={s.retryRow}>
+                    <Ionicons name="alert-circle-outline" size={14} color={Colors.error} />
+                    <Text style={s.retryText}>Tap to retry transcription</Text>
+                  </View>
                 )}
                 <View style={s.tags}>
                   {r.mom && <View style={s.tag}><Text style={s.tagText}>✦ AI Insights</Text></View>}
@@ -102,14 +154,15 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
   title: { fontSize: 32, fontWeight: '700', color: Colors.onSurface },
-  searchRow: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm },
-  search: { backgroundColor: Colors.surface, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10, ...Typography.bodyMd, color: Colors.onSurface, borderWidth: 1, borderColor: Colors.outlineVariant },
+  hint: { ...Typography.caption, color: Colors.onSurfaceVariant, marginTop: 2, marginBottom: 4 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: Spacing.lg, marginVertical: Spacing.sm, backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.outlineVariant, paddingHorizontal: Spacing.md },
+  searchIcon: { marginRight: 8 },
+  search: { flex: 1, paddingVertical: 10, ...Typography.bodyMd, color: Colors.onSurface },
   content: { padding: Spacing.lg, paddingTop: Spacing.sm },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
   card: { backgroundColor: Colors.surface, borderRadius: Radius.lg, marginBottom: Spacing.md, overflow: 'hidden', borderWidth: 1, borderColor: Colors.outlineVariant },
-  thumbnail: { height: 120, backgroundColor: Colors.primaryContainer, justifyContent: 'center', alignItems: 'center' },
-  thumbIcon: { fontSize: 36 },
+  thumbnail: { height: 100, backgroundColor: Colors.primaryContainer, justifyContent: 'center', alignItems: 'center' },
   durationBadge: { position: 'absolute', bottom: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: Radius.sm, paddingHorizontal: 8, paddingVertical: 3 },
   durationText: { ...Typography.caption, color: '#fff' },
   cardInfo: { padding: Spacing.md },
@@ -117,6 +170,8 @@ const s = StyleSheet.create({
   cardTitle: { ...Typography.titleLg, color: Colors.onSurface, flex: 1, marginRight: 8 },
   cardDate: { ...Typography.caption, color: Colors.onSurfaceVariant },
   cardDesc: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginBottom: Spacing.sm },
+  retryRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: Spacing.sm },
+  retryText: { ...Typography.caption, color: Colors.error },
   tags: { flexDirection: 'row', gap: 8 },
   tag: { backgroundColor: Colors.surfaceContainerLow, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4 },
   tagText: { ...Typography.caption, color: Colors.secondary },

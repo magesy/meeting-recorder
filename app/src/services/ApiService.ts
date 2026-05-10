@@ -82,6 +82,13 @@ class ApiService {
       throw error;
     }
   }
+  static async deleteFile(filename: string) {
+    try {
+      await axios.delete(`${BACKEND_URL}/files/${filename}`);
+    } catch {
+      // silent - not critical
+    }
+  }
 }
 
 export default ApiService;

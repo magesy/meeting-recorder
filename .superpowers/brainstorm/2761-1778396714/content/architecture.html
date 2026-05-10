@@ -1,0 +1,47 @@
+<h2>Architecture: System Flow</h2>
+<p class="subtitle">React Native + Expo App with AI Backend</p>
+
+<div class="mockup">
+  <div class="mockup-header">Data Pipeline</div>
+  <div class="mockup-body">
+    <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+      
+      <div class="card" style="width: 100%; max-width: 400px; border-left: 4px solid #4a90e2;">
+        <strong>1. Mobile App (Android)</strong>
+        <p>Record audio (AAC/M4A) via Expo AV. Store locally during meeting.</p>
+      </div>
+
+      <div style="font-size: 2rem; color: #ccc;">↓</div>
+
+      <div class="card" style="width: 100%; max-width: 400px; border-left: 4px solid #f5a623;">
+        <strong>2. Backend Processing</strong>
+        <p>Upload audio to a Python/FastAPI or Node.js backend. Handle large file chunks.</p>
+      </div>
+
+      <div style="font-size: 2rem; color: #ccc;">↓</div>
+
+      <div style="display: flex; gap: 1rem; width: 100%; justify-content: center;">
+        <div class="card" style="flex: 1; border-top: 4px solid #7ed321;">
+          <strong>3a. OpenAI Whisper</strong>
+          <p>Thai/English Speech-to-Text conversion.</p>
+        </div>
+        <div class="card" style="flex: 1; border-top: 4px solid #bd10e0;">
+          <strong>3b. Google Gemini</strong>
+          <p>Extract Action Items & generate MoM.</p>
+        </div>
+      </div>
+
+      <div style="font-size: 2rem; color: #ccc;">↓</div>
+
+      <div class="card" style="width: 100%; max-width: 400px; border-left: 4px solid #4a90e2;">
+        <strong>4. Final Output</strong>
+        <p>View Transcript & MoM in the app. Export to PDF/Markdown.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 1rem;">
+  <p>Does this data flow make sense? We'll focus on ensuring the app can handle 1-2 hour long recordings without crashing or losing data.</p>
+</div>

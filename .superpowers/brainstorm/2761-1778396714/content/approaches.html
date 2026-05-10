@@ -1,0 +1,48 @@
+<h2>Choose Your Approach</h2>
+<p class="subtitle">How should we build the Meeting Recorder?</p>
+
+<div class="options">
+  <div class="option" data-choice="expo" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>The Lean Hybrid (React Native + Expo)</h3>
+      <p><strong>Speed:</strong> Fastest to build and iterate.</p>
+      <p><strong>Tech:</strong> TypeScript, Expo AV for recording, and a simple Node.js or Python backend.</p>
+      <p><strong>Pros:</strong> Easy to add UI features later; runs great on your S24.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="native" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>The Power Native (Kotlin + Jetpack Compose)</h3>
+      <p><strong>Control:</strong> Maximum audio quality and reliability.</p>
+      <p><strong>Tech:</strong> Kotlin, Android MediaRecorder, Foregound Services for long meetings.</p>
+      <p><strong>Pros:</strong> Best handling of the S24's mic array and background recording stability.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="pwa" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>The Web-First (PWA / Next.js)</h3>
+      <p><strong>Access:</strong> Zero installation required.</p>
+      <p><strong>Tech:</strong> React/Next.js, Web Audio API.</p>
+      <p><strong>Pros:</strong> Works on any device, but background recording can be restricted by Android battery settings.</p>
+    </div>
+  </div>
+</div>
+
+<div class="pros-cons">
+  <div class="pros">
+    <h4>Common Core (AI)</h4>
+    <ul>
+      <li><strong>Transcription:</strong> OpenAI Whisper (Industry leader for Thai/English).</li>
+      <li><strong>Summarization:</strong> Gemini 1.5 Flash/Pro (Superior Thai context & MoM formatting).</li>
+    </ul>
+  </div>
+</div>
+
+<div style="margin-top: 1rem;">
+  <p><strong>My Recommendation: Option A (Expo)</strong>. It provides a "native" feel with high reliability for background recording, but we can build it much faster than a pure native app.</p>
+</div>

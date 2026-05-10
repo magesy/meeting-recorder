@@ -3,7 +3,6 @@ from typing import Optional
 import os
 
 class Settings(BaseSettings):
-    OPENAI_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None
     UPLOAD_DIR: str = "uploads"
     CORS_ORIGINS: list[str] = ["*"]

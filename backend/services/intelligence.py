@@ -1,5 +1,5 @@
 import google.generativeai as genai
-from ..core.config import settings
+from core.config import settings
 from fastapi import HTTPException
 import logging
 

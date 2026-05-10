@@ -5,10 +5,10 @@ import shutil
 import uuid
 import logging
 from contextlib import asynccontextmanager
-from .core.config import settings
-from .core.logging_config import setup_logging
-from .services.transcription import transcribe_audio
-from .services.intelligence import generate_mom
+from core.config import settings
+from core.logging_config import setup_logging
+from services.transcription import transcribe_audio
+from services.intelligence import generate_mom
 import anyio
 from pydantic import BaseModel
 

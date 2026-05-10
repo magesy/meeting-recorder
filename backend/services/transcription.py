@@ -1,6 +1,6 @@
 import openai
 from openai import OpenAI
-from ..core.config import settings
+from core.config import settings
 from fastapi import HTTPException
 import logging
 import os

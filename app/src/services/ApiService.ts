@@ -35,7 +35,7 @@ class ApiService {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 60000,
+        timeout: 120000,
       });
       return response.data;
     } catch (error: any) {

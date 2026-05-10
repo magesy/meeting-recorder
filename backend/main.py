@@ -5,7 +5,12 @@ import uuid
 from contextlib import asynccontextmanager
 from .core.config import settings
 from .services.transcription import transcribe_audio
+from .services.intelligence import generate_mom
 import anyio
+from pydantic import BaseModel
+
+class MoMRequest(BaseModel):
+    transcript: str
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -78,6 +83,16 @@ async def transcribe(filename: str):
         # Run synchronous transcription in a thread pool
         transcript = await anyio.to_thread.run_sync(transcribe_audio, file_path)
         return {"filename": safe_filename, "transcript": transcript}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/generate-mom")
+async def create_mom(request: MoMRequest):
+    try:
+        mom = await anyio.to_thread.run_sync(generate_mom, request.transcript)
+        return {"mom": mom}
     except HTTPException:
         raise
     except Exception as e:

@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 import os
 
@@ -7,7 +7,6 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = None
     UPLOAD_DIR: str = "uploads"
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()
